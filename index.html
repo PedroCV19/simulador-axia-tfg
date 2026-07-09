@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemelo Digital - Lógica PLC Almacén AXIA</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #ffffff; 
+            color: #1e293b; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; 
+            margin: 0;
+        }
+        h2 { color: #0f2d52; margin-bottom: 5px; }
+        p.subtitle { color: #64748b; margin-top: 0; margin-bottom: 20px; font-weight: 500; }
+        
+        .panel { display: flex; gap: 20px; max-width: 950px; width: 100%; height: 550px;}
+        .controls { 
+            flex: 1; 
+            background: #f8fafc; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border: 2px solid #cbd5e1; 
+            display: flex;
+            flex-direction: column;
+        }
+        .display { 
+            flex: 2; 
+            background: #e2e8f0; 
+            border-radius: 8px; 
+            position: relative; 
+            overflow: hidden; 
+            border: 2px solid #cbd5e1; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+        h3 { margin-top: 0; color: #0f2d52; font-size: 1.1em; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px;}
+        
+        /* Estilo base de los botones de nivel */
+        .btn-y { 
+            background: #0f2d52; color: white; border: none; padding: 12px; margin: 5px 0; 
+            border-radius: 4px; cursor: pointer; font-weight: bold; transition: all 0.3s; 
+            width: 100%; text-align: left; padding-left: 20px;
+        }
+        .btn-y:hover { background: #1e40af; }
+        .btn-y:disabled { background: #94a3b8; cursor: not-allowed; border-left-color: #94a3b8 !important; }
+        
+        .btn-z { 
+            background: #be1e2d; color: white; border: none; padding: 12px; margin: 5px 0; 
+            border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.3s; 
+            width: 100%; text-align: center;
+        }
+        .btn-z:hover { background: #991b24; }
+        .btn-z:disabled { background: #94a3b8; cursor: not-allowed; }
+        
+        .status { 
+            margin-top: auto; padding: 15px; border-left: 5px solid #15803d; 
+            background: white; font-weight: 600; font-size: 0.95em; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s;
+        }
+        
+        /* Elementos Gráficos */
+        #columna { position: absolute; left: 20px; top: 0; width: 60px; height: 100%; background: #475569; }
+        #guias { position: absolute; left: 65px; top: 0; width: 10px; height: 100%; background: #cbd5e1; }
+        
+        #almacen { 
+            position: absolute; right: 40px; top: 30px; width: 170px; height: 490px; 
+            background: #334155; border-radius: 4px; display: flex; flex-direction: column; 
+            justify-content: space-evenly; padding: 10px; box-sizing: border-box; 
+            border-right: 10px solid #1e293b;
+        }
+        .hueco { 
+            width: 100%; height: 60px; background: #1e293b; border: 2px dashed #64748b; 
+            position: relative; display: flex; align-items: center; justify-content: center; 
+            color: #64748b; font-weight: bold; font-size: 0.8em;
+        }
+        
+        /* Cabezales y Peso */
+        .cabezal { 
+            width: 90px; height: 50px; background: #f59e0b; border-radius: 4px 10px 10px 4px; 
+            position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; font-size: 0.8em; font-weight: bold; line-height: 1.1;
+            box-shadow: -3px 3px 5px rgba(0,0,0,0.4); text-align: center;
+        }
+        .peso { font-size: 0.75em; color: #f8fafc; font-weight: normal; margin-top: 2px;}
+        
+        #carnero { 
+            position: absolute; left: 80px; top: 427px; width: 180px; height: 60px; 
+            background: #0f2d52; border-radius: 2px; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; align-items: center; justify-content: flex-end; z-index: 10;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #husillo { 
+            width: 30px; height: 40px; background: #94a3b8; border-radius: 2px; margin-right: -10px; 
+            border-right: 5px solid #475569;
+        }
+        
+        /* Cabezal acoplado al carnero */
+        .cabezal-ram { 
+            position: absolute; right: -100px; width: 90px; height: 50px; 
+            background: #f59e0b; border-radius: 4px 10px 10px 4px; display: none;
+            color: white; font-size: 0.8em; font-weight: bold; align-items: center; justify-content: center;
+            flex-direction: column; text-align: center; line-height: 1.1;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Control CNC: Cinemática y Enclavamientos de Seguridad</h2>
+    <p class="subtitle">Simulación de validación de colisiones y restricciones de carga del almacén</p>
+    
+    <div class="panel">
+        <div class="controls">
+            <h3>Selección de Nivel (Eje Y)</h3>
+            <div id="botonesY">
+                <button id="btn-y-5" class="btn-y" onclick="moverY(5)">Nivel 5</button>
+                <button id="btn-y-4" class="btn-y" onclick="moverY(4)">Nivel 4</button>
+                <button id="btn-y-3" class="btn-y" onclick="moverY(3)">Nivel 3</button>
+                <button id="btn-y-2" class="btn-y" onclick="moverY(2)">Nivel 2</button>
+                <button id="btn-y-1" class="btn-y" onclick="moverY(1)">Nivel 1</button>
+            </div>
+
+            <h3 style="margin-top: 20px;">Maniobra CNC (Eje Z)</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-z" id="btn-insertar" onclick="avanzarZ()">► Avanzar</button>
+                <button class="btn-z" id="btn-extraer" onclick="retrocederZ()" disabled>◄ Extraer</button>
+            </div>
+
+            <div class="status" id="statusBox">
+                SISTEMA OK<br><span style="font-weight:normal; font-size:0.9em;">Máquina lista para operar.</span>
+            </div>
+        </div>
+
+        <div class="display">
+            <div id="columna"></div>
+            <div id="guias"></div>
+            
+            <div id="carnero">
+                <div id="husillo"></div>
+                <div class="cabezal-ram" id="cabezalRam"></div>
+            </div>
+
+            <div id="almacen">
+                <div class="hueco" id="hueco5" style="border-top: none;">N5<div class="cabezal" id="cab5" style="background:#10b981;">FFH<div class="peso">729 kg</div></div></div>
+                <div class="hueco" id="hueco4">N4</div> <div class="hueco" id="hueco3">N3<div class="cabezal" id="cab3">ALA<div class="peso">353 kg</div></div></div> 
+                <div class="hueco" id="hueco2">N2<div class="cabezal" id="cab2">UAD<div class="peso">416 kg</div></div></div>
+                <div class="hueco" id="hueco1">N1<div class="cabezal" id="cab1">FCT<div class="peso">544 kg</div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let nivelActual = 1;
+        let carneroCargado = false;
+        let zExtendido = false;
+        
+        const coordsY = { 5: 43, 4: 139, 3: 235, 2: 331, 1: 427 };
+        const estadoAlmacen = { 5: true, 4: false, 3: true, 2: true, 1: true };
+
+        const carnero = document.getElementById('carnero');
+        const cabezalRam = document.getElementById('cabezalRam');
+        const statusBox = document.getElementById('statusBox');
+        const btnInsertar = document.getElementById('btn-insertar');
+        const btnExtraer = document.getElementById('btn-extraer');
+        const botonesY = document.querySelectorAll('.btn-y');
+
+        // Función para actualizar dinámicamente colores y textos de los botones
+        function actualizarInterfazBotones() {
+            for(let i=1; i<=5; i++) {
+                let btn = document.getElementById('btn-y-' + i);
+                if (estadoAlmacen[i]) {
+                    // Estado: Ocupado
+                    if(i === 5) {
+                        btn.innerHTML = "Nivel 5 (Abierto) - Lleno";
+                        btn.style.borderLeft = "5px solid #10b981"; // Verde corporativo
+                    } else {
+                        btn.innerHTML = `Nivel ${i} - Lleno`;
+                        btn.style.borderLeft = "5px solid #3b82f6"; // Azul claro
+                    }
+                    btn.style.background = "#0f2d52"; // Azul oscuro por defecto
+                    btn.style.color = "white";
+                } else {
+                    // Estado: Vacío
+                    if(i === 5) {
+                        btn.innerHTML = "Nivel 5 (Abierto) - Vacío";
+                    } else {
+                        btn.innerHTML = `Nivel ${i} - Vacío`;
+                    }
+                    btn.style.borderLeft = "5px solid #f59e0b"; // Naranja de advertencia visual
+                    btn.style.background = "#334155"; // Gris oscuro para destacar que está libre
+                    btn.style.color = "#f8fafc";
+                }
+            }
+        }
+
+        // Llamada inicial para renderizar los botones al cargar la página
+        actualizarInterfazBotones();
+
+        function moverY(nivel) {
+            if (zExtendido) return; 
+            nivelActual = nivel;
+            carnero.style.top = coordsY[nivel] + 'px';
+            statusBox.innerHTML = `ALINEACIÓN Y<br><span style="font-weight:normal; font-size:0.9em;">Posicionando en Nivel ${nivel}.</span>`;
+            statusBox.style.borderLeftColor = "#15803d";
+        }
+
+        function avanzarZ() {
+            const huecoTieneCabezal = estadoAlmacen[nivelActual];
+            const infoCabezalEnCarnero = cabezalRam.innerHTML;
+
+            /* RESTRICCIÓN LÓGICA 1: Evitar colisión de cabezales */
+            if (carneroCargado && huecoTieneCabezal) {
+                statusBox.style.borderLeftColor = "#b91c1c";
+                statusBox.innerHTML = `ERROR DE COLISIÓN CNC<br><span style="font-weight:normal; font-size:0.85em; color:#b91c1c;">Nivel ${nivelActual} ocupado. El cabezal debe depositarse en un hueco vacío.</span>`;
+                return; 
+            }
+
+            /* RESTRICCIÓN LÓGICA 2: El FFH de 1500mm solo entra en el Nivel 5 */
+            if (carneroCargado && infoCabezalEnCarnero.includes('FFH') && nivelActual !== 5) {
+                statusBox.style.borderLeftColor = "#b91c1c";
+                statusBox.innerHTML = `BLOQUEO ESTRUCTURAL<br><span style="font-weight:normal; font-size:0.85em; color:#b91c1c;">Geometría incompatible. El cabezal FFH solo se admite en el Nivel 5 (Abierto).</span>`;
+                return; 
+            }
+
+            /* RESTRICCIÓN LÓGICA 3: Evitar viaje en vacío innecesario */
+            if (!carneroCargado && !huecoTieneCabezal) {
+                statusBox.style.borderLeftColor = "#f59e0b";
+                statusBox.innerHTML = `AVISO DEL SISTEMA<br><span style="font-weight:normal; font-size:0.85em; color:#b45309;">Nivel ${nivelActual} vacío. No existe cabezal para amarrar en esta posición.</span>`;
+                return; 
+            }
+
+            /* Avance preciso acotado a 260px para el contacto visual exacto */
+            carnero.style.left = '260px'; 
+            zExtendido = true;
+            
+            botonesY.forEach(btn => btn.disabled = true);
+            btnInsertar.disabled = true;
+            
+            statusBox.style.borderLeftColor = "#1e40af";
+            statusBox.innerHTML = `INTERBLOQUEO ACTIVO<br><span style="font-weight:normal; font-size:0.9em; color:#1e40af;">Eje Z extendido. Movimientos en Y deshabilitados.</span>`;
+
+            setTimeout(() => {
+                ejecutarIntercambio();
+                btnExtraer.disabled = false;
+            }, 800);
+        }
+
+        function ejecutarIntercambio() {
+            const domHueco = document.getElementById('hueco' + nivelActual);
+            const domCabezalHueco = domHueco.querySelector('.cabezal');
+
+            // RECOGER CABEZAL
+            if (!carneroCargado && estadoAlmacen[nivelActual]) {
+                domCabezalHueco.style.display = 'none';
+                cabezalRam.style.display = 'flex';
+                cabezalRam.style.background = (domCabezalHueco.innerHTML.includes('FFH')) ? '#10b981' : '#f59e0b';
+                cabezalRam.innerHTML = domCabezalHueco.innerHTML;
+                
+                estadoAlmacen[nivelActual] = false;
+                carneroCargado = true;
+                statusBox.innerHTML += `<br><span style="font-size:0.85em; color:#0f2d52;">>> Cierre de tirante completado.</span>`;
+            } 
+            // DEPOSITAR CABEZAL
+            else if (carneroCargado && !estadoAlmacen[nivelActual]) {
+                cabezalRam.style.display = 'none';
+                
+                const nuevoCabezal = document.createElement('div');
+                nuevoCabezal.className = 'cabezal';
+                nuevoCabezal.style.background = (cabezalRam.innerHTML.includes('FFH')) ? '#10b981' : '#f59e0b';
+                nuevoCabezal.innerHTML = cabezalRam.innerHTML;
+                domHueco.appendChild(nuevoCabezal);
+                
+                estadoAlmacen[nivelActual] = true;
+                carneroCargado = false;
+                statusBox.innerHTML += `<br><span style="font-size:0.85em; color:#0f2d52;">>> Apoyo isostático OK.</span>`;
+            }
+
+            // Actualizar la interfaz visual de los botones tras el cambio de estado
+            actualizarInterfazBotones();
+        }
+
+        function retrocederZ() {
+            carnero.style.left = '80px'; 
+            zExtendido = false;
+            btnExtraer.disabled = true;
+
+            setTimeout(() => {
+                botonesY.forEach(btn => btn.disabled = false);
+                btnInsertar.disabled = false;
+                
+                // Forzar re-render de colores por si el hover de deshabilitado se quedó pegado
+                actualizarInterfazBotones(); 
+                
+                statusBox.style.borderLeftColor = "#15803d";
+                statusBox.innerHTML = `SISTEMA OK<br><span style="font-weight:normal; font-size:0.9em;">Eje Z retraído en posición de seguridad.</span>`;
+            }, 800);
+        }
+    </script>
+</body>
+</html>
