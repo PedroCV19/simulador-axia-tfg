@@ -1,10 +1,103 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Gemelo Digital - Lógica PLC Almacén AXIA</title>
-    <style>
-        body { 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simuladores combinados</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --border: #dbe3ee;
+      --text: #0f172a;
+      --muted: #475569;
+      --brand: #0f2d52;
+      --accent: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      color: var(--brand);
+    }
+    .topbar p {
+      margin: 4px 0 0;
+      color: var(--muted);
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--brand);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+    .tab-panel {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      overflow: auto;
+      min-height: 75vh;
+    }
+    .tab-panel.active { display: block; }
+
+    /* Aislar el layout de cada simulador dentro de su pestaña */
+    .sim-wrap {
+      display: block;
+      width: 100%;
+      overflow: auto;
+    }
+
+    /* Reset suave dentro de cada simulador para evitar que el body original rompa la maquetación */
+    .sim-wrap > .sim-body {
+      position: relative;
+      width: 100%;
+    }
+
+    /* ====== estilos originales: simulador 1 ====== */
+    #tab1 .sim-body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #ffffff;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+    }
+    body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background-color: #ffffff; 
             color: #1e293b; 
@@ -104,11 +197,59 @@
             color: white; font-size: 0.8em; font-weight: bold; align-items: center; justify-content: center;
             flex-direction: column; text-align: center; line-height: 1.1;
         }
-    </style>
+
+    /* ====== estilos originales: simulador 2 ====== */
+    #tab2 .sim-body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; color: #1e293b; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h2 { margin: 0 0 5px 0; color: #0f172a; }
+        .simulator-container { background: white; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 20px; width: 100%; max-width: 900px; }
+        svg { width: 100%; height: 450px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; }
+        .controls { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+        .sliders-row { display: flex; justify-content: space-between; gap: 20px; }
+        .buttons-row { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        .control-group { flex: 1; display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 10px; font-size: 0.9em; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        button { background-color: #3b82f6; color: white; border: none; padding: 12px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #2563eb; }
+        button:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .status-panel { background: #f1f5f9; padding: 10px 15px; border-radius: 5px; margin-top: 15px; font-family: monospace; font-size: 1.1em; text-align: center; font-weight: bold; color: #334155; }
+        
+        /* Transiciones CSS para simular servomotores */
+        #trolley { transition: transform 1.2s ease-in-out; }
+        #hoist { transition: transform 1s ease-in-out; }
+        #cable { transition: y2 1s ease-in-out; }
+        .sling { transition: stroke-width 0.3s, stroke 0.3s; }
+  </style>
 </head>
 <body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <h1>Simuladores combinados</h1>
+        <p>Cada código está cargado en una pestaña independiente.</p>
+      </div>
+    </div>
 
-    <h2>Control CNC: Cinemática y Enclavamientos de Seguridad</h2>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab1">Gemelo Digital - Lógica PLC Almacén AXIA</button>
+      <button class="tab-btn" data-tab="tab2">Gemelo Digital - Izado y Traslado Seguro</button>
+    </div>
+
+    <section id="tab1" class="tab-panel active">
+      <div class="sim-wrap">
+        <div class="sim-body">
+          <h2>Control CNC: Cinemática y Enclavamientos de Seguridad</h2>
     <p class="subtitle">Simulación de validación de colisiones y restricciones de carga del almacén</p>
     
     <div class="panel">
@@ -150,9 +291,90 @@
             </div>
         </div>
     </div>
+        </div>
+      </div>
+    </section>
 
-    <script>
-        let nivelActual = 1;
+    <section id="tab2" class="tab-panel">
+      <div class="sim-wrap">
+        <div class="sim-body">
+          <div class="header">
+        <h2>Cinemática de Izado y Traslado (Puente Grúa)</h2>
+        <p>Lógica de enclavamientos de seguridad y macros CNC</p>
+    </div>
+
+    <div class="simulator-container">
+        <svg viewBox="0 0 900 450" id="simCanvas">
+            <rect x="0" y="20" width="900" height="30" fill="#f59e0b"/>
+            <line x1="0" y1="50" x2="900" y2="50" stroke="#b45309" stroke-width="4"/>
+            
+            <line x1="0" y1="430" x2="900" y2="430" stroke="#94a3b8" stroke-width="4"/>
+
+            <rect x="80" y="150" width="120" height="280" fill="#e2e8f0" stroke="#64748b" stroke-width="3"/>
+            <rect x="100" y="380" width="160" height="50" fill="#475569" stroke="#1e293b" stroke-width="2"/> <text x="140" y="140" font-size="14" fill="#1e293b" font-weight="bold" text-anchor="middle">FRESADORA A</text>
+
+            <rect x="700" y="150" width="120" height="280" fill="#e2e8f0" stroke="#64748b" stroke-width="3"/>
+            <rect x="640" y="380" width="160" height="50" fill="#475569" stroke="#1e293b" stroke-width="2"/> <text x="760" y="140" font-size="14" fill="#1e293b" font-weight="bold" text-anchor="middle">FRESADORA B</text>
+
+            <g id="trolley" style="transform: translateX(180px);">
+                <rect x="-30" y="10" width="60" height="40" fill="#334155" rx="5"/>
+                <line id="cable" x1="0" y1="50" x2="0" y2="210" stroke="#94a3b8" stroke-width="3"/>
+                
+                <g id="hoist" style="transform: translateY(210px);">
+                    <path d="M -10 0 C -10 15, 10 15, 10 0" fill="none" stroke="#ef4444" stroke-width="6"/>
+                    <circle cx="0" cy="0" r="5" fill="#334155"/>
+                    
+                    <line x1="0" y1="10" x2="-35" y2="60" class="sling" id="slingL" stroke="#000" stroke-width="3"/>
+                    <line x1="0" y1="10" x2="35" y2="60" class="sling" id="slingR" stroke="#000" stroke-width="3"/>
+
+                    <rect x="-40" y="60" width="80" height="110" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+                    <rect x="-35" y="130" width="70" height="35" fill="#fbd38d"/> <text x="0" y="100" font-size="10" fill="#ef4444" font-weight="bold" text-anchor="middle">CELDA</text>
+                    <circle cx="-35" cy="60" r="3" fill="#cbd5e1"/>
+                    <circle cx="35" cy="60" r="3" fill="#cbd5e1"/>
+                </g>
+            </g>
+        </svg>
+
+        <div class="status-panel" id="statusDisplay">ESTADO: Reposo en Fresadora A</div>
+
+        <div class="controls">
+            <div class="buttons-row">
+                <button id="btnA" onclick="ejecutarMacro(180)">1. Macro: Trasladar a Fresadora A</button>
+                <button id="btnB" onclick="ejecutarMacro(720)">2. Macro: Trasladar a Fresadora B</button>
+            </div>
+
+            <div class="sliders-row">
+                <div class="control-group">
+                    <label>Posición Puente (Eje X):</label>
+                    <input type="range" id="sliderX" min="100" max="800" value="180" step="10">
+                </div>
+                <div class="control-group">
+                    <label>Elevación Polipasto (Eje Y) - Limitado por mesa:</label>
+                    <input type="range" id="sliderY" min="50" max="210" value="210" step="5">
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Sistema de pestañas
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+  </script>
+
+  <script>
+    // ===== simulador 1 =====
+    let nivelActual = 1;
         let carneroCargado = false;
         let zExtendido = false;
         
@@ -232,7 +454,7 @@
             }
 
             /* Avance preciso acotado a 260px para el contacto visual exacto */
-            carnero.style.left = '260px'; 
+            carnero.style.left = '170px'; 
             zExtendido = true;
             
             botonesY.forEach(btn => btn.disabled = true);
@@ -297,6 +519,87 @@
                 statusBox.innerHTML = `SISTEMA OK<br><span style="font-weight:normal; font-size:0.9em;">Eje Z retraído en posición de seguridad.</span>`;
             }, 800);
         }
-    </script>
+  </script>
+
+  <script>
+    // ===== simulador 2 =====
+    const trolley = document.getElementById('trolley');
+        const hoist = document.getElementById('hoist');
+        const cable = document.getElementById('cable');
+        const sliderX = document.getElementById('sliderX');
+        const sliderY = document.getElementById('sliderY');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const slingL = document.getElementById('slingL');
+        const slingR = document.getElementById('slingR');
+        const btnA = document.getElementById('btnA');
+        const btnB = document.getElementById('btnB');
+
+        const COTA_MESA = 210; // Límite inferior donde la celda apoya en la mesa
+
+        function actualizarCinematica() {
+            let posX = parseInt(sliderX.value);
+            let posY = parseInt(sliderY.value);
+
+            // Bloqueo de seguridad: No puede bajar más de la cota de la mesa
+            if(posY > COTA_MESA) {
+                posY = COTA_MESA;
+                sliderY.value = COTA_MESA;
+            }
+
+            // Aplicar transformaciones
+            trolley.style.transform = `translateX(${posX}px)`;
+            hoist.style.transform = `translateY(${posY}px)`;
+            cable.setAttribute('y2', posY);
+
+            // Lógica de eslingas (Tensión vs Slack)
+            if (posY >= COTA_MESA) {
+                slingL.style.stroke = "#94a3b8"; slingL.style.strokeWidth = "2";
+                slingR.style.stroke = "#94a3b8"; slingR.style.strokeWidth = "2";
+                statusDisplay.textContent = `ESTADO: Apoyado isostáticamente (Eslingas sin tensión). X:${posX}`;
+                statusDisplay.style.color = "#15803d";
+            } else {
+                slingL.style.stroke = "#000"; slingL.style.strokeWidth = "3";
+                slingR.style.stroke = "#000"; slingR.style.strokeWidth = "3";
+                statusDisplay.textContent = `ESTADO: Izado en tensión pura. Carga suspendida. X:${posX}`;
+                statusDisplay.style.color = "#b91c1c";
+            }
+        }
+
+        // Macro de seguridad CNC
+        function ejecutarMacro(destinoX) {
+            // Bloquear interfaz durante la macro
+            btnA.disabled = true; btnB.disabled = true;
+            sliderX.disabled = true; sliderY.disabled = true;
+            
+            // FASE 1: Izado de seguridad
+            statusDisplay.textContent = "ESTADO: MACRO - Elevando carga a cota segura...";
+            sliderY.value = 50;
+            actualizarCinematica();
+
+            // FASE 2: Traslación (esperar a que suba)
+            setTimeout(() => {
+                statusDisplay.textContent = "ESTADO: MACRO - Traslación longitudinal en curso...";
+                sliderX.value = destinoX;
+                actualizarCinematica();
+                
+                // FASE 3: Descenso (esperar a que se traslade)
+                setTimeout(() => {
+                    statusDisplay.textContent = "ESTADO: MACRO - Descendiendo hasta apoyo en mesa...";
+                    sliderY.value = COTA_MESA;
+                    actualizarCinematica();
+                    
+                    // FASE 4: Fin de macro
+                    setTimeout(() => {
+                        btnA.disabled = false; btnB.disabled = false;
+                        sliderX.disabled = false; sliderY.disabled = false;
+                    }, 1000);
+                }, 1200);
+            }, 1000);
+        }
+
+        sliderX.addEventListener('input', actualizarCinematica);
+        sliderY.addEventListener('input', actualizarCinematica);
+        actualizarCinematica();
+  </script>
 </body>
 </html>
